@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+
+*.sqlite3
+db.sqlite3
+
+day_3_library_app/library.json
+day_4_blog_database/blog.db
+
+.env
+
+*.log
