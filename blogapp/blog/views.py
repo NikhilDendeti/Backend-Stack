@@ -9,6 +9,7 @@ from django.views import View
 from .models import User,Post,Category,Comment
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
+from django.core.paginator import Paginator
 
 # Create your views here.
 @method_decorator(csrf_exempt,name='dispatch')
@@ -26,7 +27,7 @@ class RegisterUser(View):
             return JsonResponse({'error':'username and passoword are required'},status=400)
 
         if User.objects.filter(username=username).exists():
-            return JsonResponse({'error':'useralready exist'})
+            return JsonResponse({'error':'user already exists'},status=400)
         user=User.objects.create_user(username=username,email=email,password=password)
         return JsonResponse({'message':'user created successfully','username':user.username},status=201)
 
@@ -60,7 +61,13 @@ class LogoutUser(View):
 @method_decorator(csrf_exempt,name='dispatch')
 class CreatePost(View):
     def get(self,request):
-        posts=Post.objects.all()
+        posts=Post.objects.all().order_by('id')
+
+        page_number=request.GET.get('page',1)
+        page_size=request.GET.get('page_size',10)
+        paginator=Paginator(posts,page_size)
+        page_obj=paginator.get_page(page_number)
+
         data=[
             {
                 'id':post.id,
@@ -71,9 +78,14 @@ class CreatePost(View):
                 'views':post.views,
                 'status':post.status,
             }
-            for post in posts
+            for post in page_obj
         ]
-        return JsonResponse(data,safe=False)
+        return JsonResponse({
+            'count':paginator.count,
+            'total_pages':paginator.num_pages,
+            'current_page':page_obj.number,
+            'results':data,
+        },safe=False)
     def post(self,request):
         if not request.user.is_authenticated:
             return JsonResponse({'error':'Login required'},status=401)
